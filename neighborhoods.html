@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html class="no-js">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title></title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width">
+
+        <link rel="stylesheet" href="css/normalize.min.css">
+        <link rel="stylesheet" href="css/main.css">
+         <link rel="stylesheet" href="css/styles.css">
+	
+
+        <script src="js/vendor/modernizr-2.6.2.min.js"></script>
+        <script src="js/vendor/d3.v3.min.js"></script>
+
+    </head>
+    <body style="width:550px">
+	    <script>
+	    
+	    var dispatch = d3.dispatch("load", "statechange");
+	    var numberFormat = d3.format(",.0");
+	    var decimalFormat = d3.format(",.2f")
+	    var crimes = [
+	    "Murder",
+	    "Rape",
+	    "Robbery",
+	    "Armed Robbery",
+	    "Agg. Assault",
+	    "Agg. Assault w/ Gun",
+	    "Burglary",
+	    "Larceny",
+	    "Auto Theft",
+	    "Arson",
+	    ];
+	    
+
+	    
+	    var points = ["points"];
+	    
+	    d3.csv("./data/2013stlcrime2.csv", type, function(error, crimes) {
+		    if (error) throw error;
+		    var neighborhoodByName = d3.map();
+		    crimes.forEach(function(d) { neighborhoodByName.set(d.neighborhood, d); });
+		    dispatch.load(neighborhoodByName);
+		    dispatch.statechange(neighborhoodByName.get("Academy"));
+		    
+	    });
+	    
+	    dispatch.on("load.menu", function(neighborhoodByName) {
+		    var select = d3.select("body")
+		    .append("div")
+		    .append("select")
+		    .on("change", function() { dispatch.statechange(neighborhoodByName.get(this.value)); });
+		    
+		    select.selectAll("option")
+		    .data(neighborhoodByName.values())
+		    .enter().append("option")
+		    .attr("value", function(d) { return d.neighborhood; })
+		    .text(function(d) { return d.neighborhood; });
+		    
+		    dispatch.on("statechange.menu", function(neighborhood) {
+			    select.property("value", neighborhood.id);
+		    });
+	    });
+		
+		dispatch.on("load.bar", function(neighborhoodByName) {
+			var margin = {top: 20, right: 20, bottom: 30, left: 50},
+			width = 100 - margin.left - margin.right,
+			height = 460 - margin.top - margin.bottom;
+			
+			var y = d3.scale.linear()
+			.domain([0, d3.max(neighborhoodByName.values(), function(d) { return d.total; })])
+			.rangeRound([height, 0])
+			.nice();
+			
+			var yAxis = d3.svg.axis()
+			.scale(y)
+			.orient("left")
+			.tickFormat(numberFormat);
+			
+			var svg = d3.select("body").append("svg")
+			.attr("width", width + margin.left + margin.right)
+			.attr("height", height + margin.top + margin.bottom)
+			.append("g")
+			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+			
+			svg.append("g")
+			.attr("class", "y axis")
+			.call(yAxis);
+			
+			svg.append("text")
+			.attr("transform", "translate(38, 410) rotate(90)")
+			.attr("text-anchor", "end")
+			.attr("id", "axis-id")
+			.text("Total crimes");
+			
+			
+			var rect = svg.append("rect")
+			.attr("x", 0)
+			.attr("width", width)
+			.attr("y", height)
+			.attr("height", 0)
+			.style("fill", "#aaa");
+			
+			svg.append("text")
+			.attr("x", 15)					
+			.attr("id", "totalcrime")
+			.attr("text-anchor", "middle")
+			.text("function(d) { return d.total; }");
+			
+			
+			dispatch.on("statechange.bar", function(d) {
+				rect.transition()
+				.attr("y", y(d.total))
+				.attr("height", y(0) - y(d.total));
+
+				d3.select("#totalcrime")
+					.transition()
+					.attr("y", y(d.total) - 5)
+					.text(numberFormat(d.total));
+				
+		
+				
+
+			});
+			
+
+			
+		});
+		
+		dispatch.on("load.pie", function(neighborhoodByName) {
+		  var width = 450,
+		      height = 450,
+		      radius = Math.min(width, height) / 2;
+
+		  var color = d3.scale.ordinal()
+		      .domain(crimes)
+		      .range(["#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#cab2d6", "#8B50C9", "#fb9a99", "#e31a1c","#fdbf6f","ff7f00"]);
+
+		  var arc = d3.svg.arc()
+		      .outerRadius(radius - 10)
+		      .innerRadius(radius - 40);
+
+		  var pie = d3.layout.pie()
+		      .sort(null);
+
+		  var svg = d3.select("body").append("svg")
+		      .attr("width", width)
+		      .attr("height", height)
+		      .attr("class", "piechart")
+		    .append("g")
+		      .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+		  var path = svg.selectAll("path")
+		      .data(crimes)
+		    .enter().append("path")
+		      .style("fill", color)
+		      .each(function() { this._current = {startAngle: 0, endAngle: 0}; });
+
+		  dispatch.on("statechange.pie", function(d) {
+		    path.data(pie.value(function(g) { return d[g]; })(crimes)).transition()
+		        .attrTween("d", function(d) {
+		          var interpolate = d3.interpolate(this._current, d);
+		          this._current = interpolate(0);
+		          return function(t) {
+		            return arc(interpolate(t));
+			    
+		          };
+			  
+		        });
+			
+		  });
+		});
+		
+		dispatch.on("load.map", function(neighborhoodByName) {
+		
+      		  var color = d3.scale.ordinal()
+      		      .domain(crimes)
+      		      .range(["#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#cab2d6", "#8B50C9", "#fb9a99", "#e31a1c","#fdbf6f","ff7f00"]);
+    		    
+		    var stlmap = d3.select(".piechart")
+    		    .append("g")
+    		    .attr("x", "0")
+    		    .attr("y", "20")
+    		    .selectAll("polygon")
+		    .data(neighborhoodByName.values())
+    		    .enter()
+		    .append("polygon")
+    		    .attr("points", function(d) { return d.points; })
+    		    .attr("stroke", "#666")
+		    .attr("id", function(d) {return d.neighborhood.replace(/[^a-z0-9\s]/gi, '').replace(/[_\s]/g, ''); })
+		    .attr("fill", "#eee");
+	
+		    stlmap
+		    .attr("transform", "translate(45, 45), scale(.32)");
+		    
+		    var legend = d3.select(".piechart")
+		    .selectAll("rect")
+		    .data(crimes);
+		    
+		    legend.enter().append("rect")
+		    .attr("width", "40")
+		    .attr("height", "30")
+		    .attr("x", "220")
+		    .attr("y", function(d, i) { return 60 + i * 33; })
+		    .style("fill", color);
+		    
+		    d3.select(".piechart").selectAll("text")
+		    .data(crimes)
+		    .enter()
+		    .append("text")
+		    .attr("x", "265")
+		    .attr("y", function(d, i) { return 80 + i * 33; })
+		    .attr("class", "crimeslist")
+		    .text(function(d) {return d;});
+		    
+		    var crimebreakdown = d3.select(".piechart").append("g")
+		    .selectAll("text")
+		    .data(crimes)
+		    .enter()
+		    .append("text")
+		    .attr("class", "crimebreakdown");
+		    
+		    dispatch.on("statechange.map", function(d) {
+			    
+			    var selection = d.neighborhood.replace(/[^a-z0-9\s]/gi, '').replace(/[_\s]/g, '');
+			    
+			    d3.select(".piechart").selectAll("polygon")
+			    .attr("fill", "#eee");
+			   
+			    d3.select("#" + selection)
+			    .attr("fill", "#0f0");
+			    
+			    var number = function(g) { return d[g]; }
+			    
+			    
+			    crimebreakdown
+			    .transition().attr("x", "240")
+			    .attr("y", function(d, i) { return 80 + i * 33; })
+			    .attr("text-anchor", "middle")
+			    .text(number);
+		    });
+		});
+		
+		dispatch.on("load.list", function(neighborhoodByName) {
+
+			var summarydiv = d3.select("body").append("div")
+			.attr("width", "550")
+			.attr("id", "summarydiv");
+			
+			var summary = summarydiv
+			.append("p")
+			.attr("class", "summary");
+    		    	
+			dispatch.on("statechange.list", function(d) {
+				
+				var perThousand = 1000 / d.pop;
+				
+				summarydiv.select(".summary")
+				.html("<span class=\"emphasis\">" + d.neighborhood + "</span> neighborhood's <span class=\"emphasis\">" + d.total + "</span> total crimes in 2013 were about <span class=\"emphasis\">"
+				 + decimalFormat(d.total * perThousand) + " crimes per 1,000 people</span> (as of the 2010 census).");
+			
+			
+			});
+		});
+		
+		function type(d) {
+			d.total = +d.total;
+			return d;
+		}    
+
+	    </script>
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+        <script>window.jQuery || document.write('<script src="js/vendor/jquery-1.10.1.min.js"><\/script>')</script>
+
+        <script src="js/main.js"></script>
+    </body>
+</html>

@@ -1,0 +1,37 @@
+@import url("http://fonts.googleapis.com/css?family=Titillium+Web:200,400,700,200italic");
+/* line 7, ../sass/styles.scss */
+body {
+  width: 550px;
+}
+
+/* line 11, ../sass/styles.scss */
+.axis path {
+  display: none;
+}
+
+/* line 17, ../sass/styles.scss */
+.axis text,
+#axis-id,
+.crimeslist {
+  font: 400 14px "Titillium Web", sans-serif;
+}
+
+/* line 21, ../sass/styles.scss */
+#totalcrime {
+  font: 700 20px 'Titillium Web', sans-serif;
+}
+
+/* line 25, ../sass/styles.scss */
+.crimebreakdown {
+  font: 700 18px 'Titillium Web', sans-serif;
+}
+
+/* line 29, ../sass/styles.scss */
+.summary {
+  font: 200 30px 'Titillium Web', sans-serif;
+}
+
+/* line 33, ../sass/styles.scss */
+.emphasis {
+  font: 700 30px 'Titillium Web', sans-serif;
+}
