@@ -61,7 +61,7 @@
 		    .text(function(d) { return d.neighborhood; });
 		    
 		    dispatch.on("statechange.menu", function(neighborhood) {
-			    select.property("value", neighborhood.id);
+			    select.property("value", neighborhood.neighborhood);
 		    });
 	    });
 		
